@@ -1,7 +1,6 @@
 // AbandonedBuildingBossSystem.cs
 namespace AbandonedBuildingBoss
 {
-    using Colossal.Entities;
     using Game;
     using Game.Areas;
     using Game.Buildings;
@@ -13,6 +12,7 @@ namespace AbandonedBuildingBoss
 
     public partial class AbandonedBuildingBossSystem : GameSystemBase
     {
+        private const int kUpdateIntervalFrames = 32; // adjust to 16 for faster cleanup vs. overhead
         private EntityQuery m_AbandonedBuildingQuery;
 
         protected override void OnCreate()
@@ -40,11 +40,11 @@ namespace AbandonedBuildingBoss
 
         protected override void OnUpdate()
         {
-            // Skip when disabled
+            // Skip when disabled.
             if (!Mod.m_Settings.Enabled)
                 return;
 
-            // Fast no-op: avoids NativeArray allocation when there are no matches this tick.
+            // Fast no-op: avoid allocation when query is empty.
             if (m_AbandonedBuildingQuery.IsEmptyIgnoreFilter)
                 return;
 
@@ -55,22 +55,25 @@ namespace AbandonedBuildingBoss
             foreach (Entity entity in abandonedBuildings)
             {
                 // Remove linked areas.
-                if (em.TryGetBuffer<SubArea>(entity, false, out DynamicBuffer<SubArea> subareas))
+                if (em.HasBuffer<SubArea>(entity))
                 {
+                    DynamicBuffer<SubArea> subareas = em.GetBuffer<SubArea>(entity);
                     foreach (SubArea subArea in subareas)
                         em.AddComponent<Deleted>(subArea.m_Area);
                 }
 
                 // Remove linked nets.
-                if (em.TryGetBuffer<SubNet>(entity, false, out DynamicBuffer<SubNet> subnets))
+                if (em.HasBuffer<SubNet>(entity))
                 {
+                    DynamicBuffer<SubNet> subnets = em.GetBuffer<SubNet>(entity);
                     foreach (SubNet net in subnets)
                         em.AddComponent<Deleted>(net.m_SubNet);
                 }
 
                 // Remove linked lanes.
-                if (em.TryGetBuffer<SubLane>(entity, false, out DynamicBuffer<SubLane> sublanes))
+                if (em.HasBuffer<SubLane>(entity))
                 {
+                    DynamicBuffer<SubLane> sublanes = em.GetBuffer<SubLane>(entity);
                     foreach (SubLane lane in sublanes)
                         em.AddComponent<Deleted>(lane.m_SubLane);
                 }
@@ -85,9 +88,10 @@ namespace AbandonedBuildingBoss
 
         public override int GetUpdateInterval(SystemUpdatePhase phase)
         {
-            // Executes every ~32 frames in-game to keep low overhead; default to 1 elsewhere.
+            // Executes every ~kUpdateIntervalFrames in GameSimulation to keep overhead modest; default to 1 elsewhere.
             if (phase == SystemUpdatePhase.GameSimulation)
-                return 32;  // change to 16 for more aggressive cleanup
+                return kUpdateIntervalFrames;
+
             return 1;
         }
     }
