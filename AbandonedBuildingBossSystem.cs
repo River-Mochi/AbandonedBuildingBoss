@@ -35,7 +35,7 @@ namespace AbandonedBuildingBoss
             });
 
             RequireForUpdate(m_AbandonedBuildingQuery);
-            Mod.Log.Info("AbandonedBuildingBossSystem created (non-Burst path).");
+            Mod.Log.Info("AbandonedBuildingBossSystem created.");
         }
 
         protected override void OnUpdate()
@@ -85,9 +85,10 @@ namespace AbandonedBuildingBoss
 
         public override int GetUpdateInterval(SystemUpdatePhase phase)
         {
-            // Executes every ~16 frames in-game to keep low overhead; default to 1 elsewhere.
+            // Executes every ~32 frames in-game to keep low overhead; default to 1 elsewhere.
             if (phase == SystemUpdatePhase.GameSimulation)
-                return 16;
+                return 32;  // change to 16 for more aggressive cleanup
             return 1;
         }
     }
+}
