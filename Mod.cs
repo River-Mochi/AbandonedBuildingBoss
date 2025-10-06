@@ -1,60 +1,59 @@
-﻿using Colossal.IO.AssetDatabase;
-using Colossal.Logging;
-using Game;
-using Game.Input;
-using Game.Modding;
-using Game.SceneFlow;
-using UnityEngine;
-
+// Mod.cs
 namespace AbandonedBuildingBoss
 {
-    public class Mod : IMod
-    {
-        public static ILog log = LogManager.GetLogger($"{nameof(AbandonedBuildingBoss)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
-        private Setting m_Setting;
-        public static ProxyAction m_ButtonAction;
-        public static ProxyAction m_AxisAction;
-        public static ProxyAction m_VectorAction;
+    using Colossal.IO.AssetDatabase;
+    using Colossal.Localization;
+    using Colossal.Logging;
+    using Game;
+    using Game.Modding;
+    using Game.SceneFlow;
 
-        public const string kButtonActionName = "ButtonBinding";
-        public const string kAxisActionName = "FloatBinding";
-        public const string kVectorActionName = "Vector2Binding";
+    public sealed class Mod : IMod
+    {
+        public const string Name = "Abandoned Building Boss";
+        public const string Version = "0.1.0";
+
+        public static readonly ILog Log =
+            LogManager.GetLogger($"{nameof(AbandonedBuildingBoss)}.{nameof(Mod)}")
+                      .SetShowsErrorsInUI(false);
+
+        public static Setting? m_Settings { get; private set; }
 
         public void OnLoad(UpdateSystem updateSystem)
         {
-            log.Info(nameof(OnLoad));
+            Log.Info($"{Name} v{Version} - OnLoad");
 
-            if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
-                log.Info($"Current mod asset at {asset.path}");
+            if (GameManager.instance.modManager.TryGetExecutableAsset(this, out ExecutableAsset execAsset))
+                Log.Info($"Current mod asset at {execAsset.path}");
 
-            m_Setting = new Setting(this);
-            m_Setting.RegisterInOptionsUI();
-            GameManager.instance.localizationManager.AddSource("en-US", new LocaleEN(m_Setting));
+            // Settings page
+            m_Settings = new Setting(this);
 
-            m_Setting.RegisterKeyBindings();
+            // Register English strings so Options UI shows labels instead of raw keys
+            LocalizationManager? lm = GameManager.instance?.localizationManager;
+            if (lm != null)
+            {
+                Log.Info($"[Locale] ACTIVE at LOAD: {lm.activeLocaleId}");  // One-time info at load
+                lm.AddSource("en-US", new LocaleEN(m_Settings));
+                lm.AddSource("en", new LocaleEN(m_Settings));
+            }
 
-            m_ButtonAction = m_Setting.GetAction(kButtonActionName);
-            m_AxisAction = m_Setting.GetAction(kAxisActionName);
-            m_VectorAction = m_Setting.GetAction(kVectorActionName);
+            // Load saved settings
+            AssetDatabase.global.LoadSettings("AbandonedBuildingBoss", m_Settings, new Setting(this));
+            // Expose Options UI
+            m_Settings.RegisterInOptionsUI();
 
-            m_ButtonAction.shouldBeEnabled = true;
-            m_AxisAction.shouldBeEnabled = true;
-            m_VectorAction.shouldBeEnabled = true;
-
-            m_ButtonAction.onInteraction += (_, phase) => log.Info($"[{m_ButtonAction.name}] On{phase} {m_ButtonAction.ReadValue<float>()}");
-            m_AxisAction.onInteraction += (_, phase) => log.Info($"[{m_AxisAction.name}] On{phase} {m_AxisAction.ReadValue<float>()}");
-            m_VectorAction.onInteraction += (_, phase) => log.Info($"[{m_VectorAction.name}] On{phase} {m_VectorAction.ReadValue<Vector2>()}");
-
-            AssetDatabase.global.LoadSettings(nameof(AbandonedBuildingBoss), m_Setting, new Setting(this));
+            // System registration (run before deletion system)
+            updateSystem.UpdateAfter<AbandonedBuildingBossSystem>(SystemUpdatePhase.GameSimulation);
         }
 
         public void OnDispose()
         {
-            log.Info(nameof(OnDispose));
-            if (m_Setting != null)
+            Log.Info(nameof(OnDispose));
+            if (m_Settings != null)
             {
-                m_Setting.UnregisterInOptionsUI();
-                m_Setting = null;
+                m_Settings.UnregisterInOptionsUI();
+                m_Settings = null;
             }
         }
     }
