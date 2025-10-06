@@ -14,36 +14,36 @@ namespace AbandonedBuildingBoss
         public const string Version = "0.1.0";
 
         public static readonly ILog Log =
-            LogManager.GetLogger($"{nameof(AbandonedBuildingBoss)}.{nameof(Mod)}")
-                      .SetShowsErrorsInUI(false);
+            LogManager.GetLogger("AbandonedBuildingBoss").SetShowsErrorsInUI(false);
 
-        public static Setting? m_Settings { get; private set; }
+        public static Setting m_Settings { get; private set; } = null!;
 
         public void OnLoad(UpdateSystem updateSystem)
         {
             Log.Info($"{Name} v{Version} - OnLoad");
 
+            // Executable asset path (useful for diagnostics)
             if (GameManager.instance.modManager.TryGetExecutableAsset(this, out ExecutableAsset execAsset))
-                Log.Info($"Current mod asset at {execAsset.path}");
+            {
+                // Settings instance and persisted values (defaults provided via template pattern)
+                m_Settings = new Setting(this);
+            }
 
-            // Settings page
-            m_Settings = new Setting(this);
+            AssetDatabase.global.LoadSettings(nameof(AbandonedBuildingBoss), m_Settings, new Setting(this));
 
-            // Register English strings so Options UI shows labels instead of raw keys
+            // Locale registration so Options UI shows labels (support both "en-US" and plain "en")
             LocalizationManager? lm = GameManager.instance?.localizationManager;
             if (lm != null)
             {
-                Log.Info($"[Locale] ACTIVE at LOAD: {lm.activeLocaleId}");  // One-time info at load
+                Log.Info($"[Locale] ACTIVE at LOAD: {lm.activeLocaleId}");
                 lm.AddSource("en-US", new LocaleEN(m_Settings));
                 lm.AddSource("en", new LocaleEN(m_Settings));
             }
 
-            // Load saved settings
-            AssetDatabase.global.LoadSettings("AbandonedBuildingBoss", m_Settings, new Setting(this));
             // Expose Options UI
             m_Settings.RegisterInOptionsUI();
 
-            // System registration (run before deletion system)
+            // Simulation system scheduling (work gated by the Enabled toggle)
             updateSystem.UpdateAfter<AbandonedBuildingBossSystem>(SystemUpdatePhase.GameSimulation);
         }
 
@@ -53,7 +53,7 @@ namespace AbandonedBuildingBoss
             if (m_Settings != null)
             {
                 m_Settings.UnregisterInOptionsUI();
-                m_Settings = null;
+                m_Settings = null!;
             }
         }
     }

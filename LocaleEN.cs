@@ -37,7 +37,7 @@ namespace AbandonedBuildingBoss
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.VersionDisplay)), "Version" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.VersionDisplay)),  "Installed version." },
 
-                // Links (two buttons in same row)
+                // Links
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.OpenParadoxMods)), "Paradox Mods" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.OpenParadoxMods)),  "Open the Paradox Mods page." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.OpenDiscord)),     "Discord" },
@@ -48,8 +48,6 @@ namespace AbandonedBuildingBoss
             };
         }
 
-        public void Unload()
-        {
-        }
+        public void Unload() { }
     }
 }

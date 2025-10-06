@@ -4,7 +4,7 @@ namespace AbandonedBuildingBoss
     using Colossal.IO.AssetDatabase;
     using Game.Modding;
     using Game.Settings;
-    using UnityEngine;      // Application.OpenURL
+    using UnityEngine; // Application.OpenURL
 
     [FileLocation("ModsSettings/AbandonedBuildingBoss/AbandonedBuildingBoss")]
     [SettingsUITabOrder(ActionsTab, AboutTab)]
@@ -21,9 +21,9 @@ namespace AbandonedBuildingBoss
         public const string AboutGroup = "Info";
         public const string LinksGroup = "Links";
 
-        // URLs
+        // URLs (update Paradox Mods link when the mod page is live)
         private const string UrlDiscord = "https://discord.gg/HTav7ARPs2";
-        private const string UrlParadoxMods = "https://mods.paradoxplaza.com/authors/kimosabe1?orderBy=desc&sortBy=best&time=quarter"; // update when live
+        private const string UrlParadoxMods = "https://mods.paradoxplaza.com/authors/kimosabe1?orderBy=desc&sortBy=best&time=quarter";
 
         public Setting(IMod mod) : base(mod) { }
 
@@ -32,18 +32,18 @@ namespace AbandonedBuildingBoss
             Enabled = true;
         }
 
-        // Actions (single toggle)
+        // Actions
         [SettingsUISection(ActionsTab, ActionsGroup)]
         public bool Enabled { get; set; } = true;
 
-        // About (name + version)
+        // About
         [SettingsUISection(AboutTab, AboutGroup)]
         public string NameDisplay => Mod.Name;
 
         [SettingsUISection(AboutTab, AboutGroup)]
         public string VersionDisplay => Mod.Version;
 
-        // Links (same group → same row)
+        // Links (same group => same row)
         [SettingsUIButtonGroup(LinksGroup)]
         [SettingsUIButton]
         [SettingsUISection(AboutTab, LinksGroup)]
@@ -54,5 +54,4 @@ namespace AbandonedBuildingBoss
         [SettingsUISection(AboutTab, LinksGroup)]
         public bool OpenDiscord { set { Application.OpenURL(UrlDiscord); } }
     }
-
 }

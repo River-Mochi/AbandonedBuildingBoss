@@ -1,5 +1,4 @@
-// File: AbandonedBuildingBossSystem.cs
-
+// AbandonedBuildingBossSystem.cs
 namespace AbandonedBuildingBoss
 {
     using Colossal.Entities;
@@ -14,13 +13,14 @@ namespace AbandonedBuildingBoss
 
     public partial class AbandonedBuildingBossSystem : GameSystemBase
     {
-        private EntityQuery _abandonedBuildingQuery;
+        private EntityQuery m_AbandonedBuildingQuery;
 
         protected override void OnCreate()
         {
             base.OnCreate();
 
-            _abandonedBuildingQuery = GetEntityQuery(new EntityQueryDesc
+            // Targets Abandoned + Building; excludes Deleted and Temp to prevent double work.
+            m_AbandonedBuildingQuery = GetEntityQuery(new EntityQueryDesc
             {
                 All = new[]
                 {
@@ -34,52 +34,60 @@ namespace AbandonedBuildingBoss
                 }
             });
 
-            RequireForUpdate(_abandonedBuildingQuery);
+            RequireForUpdate(m_AbandonedBuildingQuery);
             Mod.Log.Info("AbandonedBuildingBossSystem created (non-Burst path).");
         }
 
         protected override void OnUpdate()
         {
-            // Gate on the settings toggle (default ON)
-            if (Mod.m_Settings?.Enabled != true)
+            // Skip when disabled
+            if (!Mod.m_Settings.Enabled)
                 return;
 
-            // Pull the matching entities this frame; cost only when new Abandoned appear.
-            NativeArray<Entity> abandonedBuildings = _abandonedBuildingQuery.ToEntityArray(Allocator.Temp);
+            // Fast no-op: avoids NativeArray allocation when there are no matches this tick.
+            if (m_AbandonedBuildingQuery.IsEmptyIgnoreFilter)
+                return;
+
+            // Collect matching entities; each is processed once, then excluded by 'Deleted'.
+            NativeArray<Entity> abandonedBuildings = m_AbandonedBuildingQuery.ToEntityArray(Allocator.Temp);
             EntityManager em = EntityManager;
 
             foreach (Entity entity in abandonedBuildings)
             {
-                // Clean sub-areas
+                // Remove linked areas.
                 if (em.TryGetBuffer<SubArea>(entity, false, out DynamicBuffer<SubArea> subareas))
                 {
                     foreach (SubArea subArea in subareas)
                         em.AddComponent<Deleted>(subArea.m_Area);
                 }
 
-                // Clean sub-nets
+                // Remove linked nets.
                 if (em.TryGetBuffer<SubNet>(entity, false, out DynamicBuffer<SubNet> subnets))
                 {
                     foreach (SubNet net in subnets)
                         em.AddComponent<Deleted>(net.m_SubNet);
                 }
 
-                // Clean sub-lanes
+                // Remove linked lanes.
                 if (em.TryGetBuffer<SubLane>(entity, false, out DynamicBuffer<SubLane> sublanes))
                 {
                     foreach (SubLane lane in sublanes)
                         em.AddComponent<Deleted>(lane.m_SubLane);
                 }
 
-                // Finally delete the building entity itself
+                // Finally remove the building entity.
                 em.AddComponent<Deleted>(entity);
             }
 
+            // Release temp storage.
             abandonedBuildings.Dispose();
         }
 
-        // Run ~every 16 frames in GameSimulation to keep low overhead.
-        public override int GetUpdateInterval(SystemUpdatePhase phase) =>
-            phase == SystemUpdatePhase.GameSimulation ? 16 : 1;
+        public override int GetUpdateInterval(SystemUpdatePhase phase)
+        {
+            // Executes every ~16 frames in-game to keep low overhead; default to 1 elsewhere.
+            if (phase == SystemUpdatePhase.GameSimulation)
+                return 16;
+            return 1;
+        }
     }
-}
